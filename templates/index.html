@@ -3,143 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple URL Ping</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: Arial, sans-serif; 
-            background: #f0f2f5; 
-            padding: 20px; 
-        }
-        .container { 
-            max-width: 800px; 
-            margin: 0 auto; 
-        }
-        header { 
-            text-align: center; 
-            margin-bottom: 30px; 
-            padding: 20px; 
-            background: white; 
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        h1 { color: #333; margin-bottom: 10px; }
-        .subtitle { color: #666; }
-        
-        .card { 
-            background: white; 
-            padding: 20px; 
-            margin-bottom: 20px; 
-            border-radius: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        h2 { margin-bottom: 15px; color: #444; }
-        
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; color: #555; }
-        input, select { 
-            width: 100%; 
-            padding: 10px; 
-            border: 1px solid #ddd; 
-            border-radius: 5px; 
-            font-size: 16px;
-        }
-        .btn { 
-            padding: 10px 20px; 
-            border: none; 
-            border-radius: 5px; 
-            cursor: pointer; 
-            font-size: 16px;
-            margin-right: 10px;
-            margin-bottom: 10px;
-        }
-        .btn-add { background: #4CAF50; color: white; }
-        .btn-start { background: #2196F3; color: white; }
-        .btn-stop { background: #ff9800; color: white; }
-        .btn-delete { background: #f44336; color: white; }
-        
-        .url-list { margin-top: 20px; }
-        .url-item { 
-            background: #f8f9fa; 
-            padding: 15px; 
-            margin-bottom: 10px; 
-            border-radius: 5px;
-            border-left: 4px solid #2196F3;
-        }
-        .url-info { margin-bottom: 10px; }
-        .url-name { font-weight: bold; color: #333; }
-        .url-link { color: #666; font-size: 14px; }
-        .url-interval { color: #888; font-size: 14px; }
-        
-        .status { 
-            display: inline-block; 
-            padding: 2px 8px; 
-            border-radius: 10px; 
-            font-size: 12px;
-            margin-left: 10px;
-        }
-        .status-active { background: #4CAF50; color: white; }
-        .status-inactive { background: #ccc; color: #666; }
-        
-        .empty { 
-            text-align: center; 
-            padding: 40px; 
-            color: #999; 
-            font-style: italic;
-        }
-        
-        footer { 
-            text-align: center; 
-            margin-top: 30px; 
-            color: #888; 
-            font-size: 14px;
-        }
-    </style>
+    <title>Simple URL Ping Monitor</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🔗 Simple URL Ping Monitor</h1>
-            <p class="subtitle">Add URLs. Set intervals. Start/Stop pinging.</p>
+            <h1><i class="fas fa-satellite-dish"></i> URL Ping Monitor</h1>
+            <p class="subtitle">Monitor your website/API uptime</p>
         </header>
-        
-        <div class="card">
-            <h2>➕ Add New URL</h2>
-            <form id="addForm">
-                <div class="form-group">
-                    <label for="url">URL to Ping:</label>
-                    <input type="text" id="url" placeholder="https://example.com" required>
-                </div>
-                <div class="form-group">
-                    <label for="interval">Ping Interval (minutes):</label>
-                    <select id="interval">
-                        <option value="1">1 minute</option>
-                        <option value="5" selected>5 minutes</option>
-                        <option value="10">10 minutes</option>
-                        <option value="30">30 minutes</option>
-                        <option value="60">60 minutes</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn btn-add">Add URL</button>
-            </form>
-        </div>
-        
-        <div class="card">
-            <h2>📋 Your URLs</h2>
-            <div id="urlList" class="url-list">
-                <!-- URLs will appear here -->
+
+        <div class="dashboard">
+            <!-- Add URL Form -->
+            <div class="card">
+                <h2><i class="fas fa-plus-circle"></i> Add URL to Monitor</h2>
+                <form id="addUrlForm">
+                    <div class="form-group">
+                        <label for="urlName">Display Name (Optional)</label>
+                        <input type="text" id="urlName" placeholder="e.g., My Website">
+                    </div>
+                    <div class="form-group">
+                        <label for="url">URL *</label>
+                        <input type="text" id="url" placeholder="https://example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="interval">Check Interval (minutes)</label>
+                        <input type="number" id="interval" value="5" min="1">
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Add URL
+                    </button>
+                </form>
             </div>
-            <div id="emptyMessage" class="empty">
-                No URLs added yet. Add your first URL above.
+
+            <!-- URL List -->
+            <div class="card">
+                <div class="card-header">
+                    <h2><i class="fas fa-list"></i> Monitored URLs</h2>
+                    <button id="checkAll" class="btn btn-secondary">
+                        <i class="fas fa-sync-alt"></i> Check All
+                    </button>
+                </div>
+                <div id="urlsList" class="urls-list">
+                    <!-- URLs will be loaded here -->
+                    <div class="empty-state">
+                        <i class="fas fa-link fa-3x"></i>
+                        <p>No URLs added yet. Add your first URL above!</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Dashboard -->
+            <div class="card">
+                <h2><i class="fas fa-chart-bar"></i> Status Overview</h2>
+                <div class="stats">
+                    <div class="stat-card up">
+                        <i class="fas fa-check-circle"></i>
+                        <h3 id="upCount">0</h3>
+                        <p>Sites Up</p>
+                    </div>
+                    <div class="stat-card down">
+                        <i class="fas fa-times-circle"></i>
+                        <h3 id="downCount">0</h3>
+                        <p>Sites Down</p>
+                    </div>
+                    <div class="stat-card total">
+                        <i class="fas fa-globe"></i>
+                        <h3 id="totalCount">0</h3>
+                        <p>Total URLs</p>
+                    </div>
+                </div>
             </div>
         </div>
-        
+
+        <!-- Footer -->
         <footer>
-            <p>Simple URL Ping Monitor • Data persists after restart • No unnecessary data stored</p>
+            <p>Simple URL Monitor | Deployed on Vercel</p>
+            <p class="footer-note">
+                <i class="fas fa-info-circle"></i>
+                Note: This is a serverless version. Manual checking required.
+            </p>
         </footer>
     </div>
-    
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+
+    <!-- Loading Overlay -->
+    <div id="loading" class="loading-overlay">
+        <div class="loading-content">
+            <i class="fas fa-spinner fa-spin fa-2x"></i>
+            <p>Loading...</p>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js"></script>
 </body>
 </html>
