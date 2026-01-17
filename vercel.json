@@ -1,13 +1,31 @@
 {
   "functions": {
-    "api/index.py": {
+    "api/**/*.py": {
       "runtime": "python3.9"
     }
   },
   "rewrites": [
     {
+      "source": "/api/(.*)",
+      "destination": "/api/index.py"
+    },
+    {
       "source": "/(.*)",
       "destination": "/api/index.py"
+    }
+  ],
+  "builds": [
+    {
+      "src": "api/*.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "static/*",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "templates/*",
+      "use": "@vercel/static"
     }
   ]
 }
