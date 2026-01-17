@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
 import json
 import os
@@ -7,16 +7,11 @@ import requests
 from urllib.parse import urlparse
 import uuid
 
-app = Flask(__name__, 
-           static_folder='../static',
-           template_folder='../templates')
+app = Flask(__name__)
 CORS(app)
 
-# File to store URLs
-URLS_FILE = 'urls.json'
-
-# Store in-memory for serverless (will reset on cold start)
-active_checks = {}
+# File to store URLs (in same directory)
+URLS_FILE = os.path.join(os.path.dirname(__file__), 'urls.json')
 
 def load_urls():
     """Load URLs from file"""
@@ -24,19 +19,58 @@ def load_urls():
         if os.path.exists(URLS_FILE):
             with open(URLS_FILE, 'r') as f:
                 return json.load(f)
+        else:
+            # Create sample data if file doesn't exist
+            sample_data = create_sample_data()
+            save_urls(sample_data)
+            return sample_data
     except Exception as e:
         print(f"Error loading URLs: {e}")
-    return {}
+        return {}
 
 def save_urls(urls_data):
     """Save URLs to file"""
     try:
         with open(URLS_FILE, 'w') as f:
-            json.dump(urls_data, f)
+            json.dump(urls_data, f, indent=2)
         return True
     except Exception as e:
         print(f"Error saving URLs: {e}")
         return False
+
+def create_sample_data():
+    """Create sample data for demonstration"""
+    sample_data = {
+        str(uuid.uuid4()): {
+            'id': str(uuid.uuid4()),
+            'name': 'Google',
+            'url': 'https://www.google.com',
+            'interval': 5,
+            'monitoring': True,
+            'last_check': {
+                'status': 'up',
+                'status_code': 200,
+                'response_time': 45.67,
+                'timestamp': time.time()
+            },
+            'created_at': time.time() - 86400  # 1 day ago
+        },
+        str(uuid.uuid4()): {
+            'id': str(uuid.uuid4()),
+            'name': 'GitHub',
+            'url': 'https://github.com',
+            'interval': 10,
+            'monitoring': False,
+            'last_check': {
+                'status': 'up',
+                'status_code': 200,
+                'response_time': 89.12,
+                'timestamp': time.time()
+            },
+            'created_at': time.time() - 43200  # 12 hours ago
+        }
+    }
+    return sample_data
 
 def is_valid_url(url):
     """Simple URL validation"""
@@ -53,7 +87,8 @@ def check_url_status(url):
         response = requests.get(
             url, 
             timeout=10,
-            headers={'User-Agent': 'URL-Monitor/1.0'}
+            headers={'User-Agent': 'URL-Monitor/1.0'},
+            allow_redirects=True
         )
         response_time = round((time.time() - start_time) * 1000, 2)
         
@@ -77,17 +112,28 @@ def index():
     """Serve the main page"""
     return render_template('index.html')
 
+@app.route('/static/<path:path>')
+def serve_static(path):
+    """Serve static files"""
+    return send_from_directory('../static', path)
+
 @app.route('/api/urls', methods=['GET'])
 def get_urls():
     """Get all URLs"""
-    urls_data = load_urls()
-    return jsonify(urls_data)
+    try:
+        urls_data = load_urls()
+        return jsonify(urls_data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/urls', methods=['POST'])
 def add_url():
     """Add a new URL"""
     try:
-        data = request.json
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+            
         url = data.get('url', '').strip()
         interval = data.get('interval', 5)
         name = data.get('name', url)
@@ -100,6 +146,8 @@ def add_url():
         
         if interval < 1:
             interval = 1
+        if interval > 60:
+            interval = 60
         
         urls_data = load_urls()
         
@@ -185,49 +233,26 @@ def check_all_urls():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/urls/<url_id>/monitoring', methods=['PUT'])
-def update_monitoring(url_id):
-    """Toggle monitoring status"""
-    try:
-        data = request.json
-        monitoring = data.get('monitoring', False)
-        
-        urls_data = load_urls()
-        if url_id not in urls_data:
-            return jsonify({'error': 'URL not found'}), 404
-        
-        urls_data[url_id]['monitoring'] = monitoring
-        save_urls(urls_data)
-        
-        return jsonify({
-            'message': f'Monitoring {"enabled" if monitoring else "disabled"}',
-            'monitoring': monitoring
-        }), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
-
 @app.route('/api/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
     return jsonify({
         'status': 'ok',
         'timestamp': time.time(),
-        'service': 'URL Ping Monitor'
+        'service': 'URL Ping Monitor',
+        'version': '1.0.0'
     }), 200
 
+# Error handlers
 @app.errorhandler(404)
 def not_found(e):
-    """Handle 404 errors"""
     return jsonify({'error': 'Endpoint not found'}), 404
 
 @app.errorhandler(500)
 def server_error(e):
-    """Handle 500 errors"""
     return jsonify({'error': 'Internal server error'}), 500
 
-# For Vercel serverless
+# Vercel specific
 if __name__ == '__main__':
-    app.run(debug=False)
-else:
-    # Export for Vercel
-    handler = app
+    port = int(os.environ.get('PORT', 3000))
+    app.run(host='0.0.0.0', port=port, debug=False)
